@@ -15,7 +15,7 @@ from utils.model import ResNet9
 from utils.yields import yield_preprocess
 
 # model paths
-crop_model_path = "models/crop_recommendere.pkl"
+crop_model_path = "models/crop_recommender.pkl"
 yield_model_path = "models/yield_predictor.pkl"
 fertilizer_model_path = "models/fertilizer_recommender.pkl"
 disease_model_path = "models/disease_teller.pth"
@@ -24,13 +24,13 @@ disease_model_path = "models/disease_teller.pth"
 with open(crop_model_path, "rb") as f:
     crop_model = pickle.load(f)
 
-# with open(yield_model_path, "rb") as f:
-#    model = pickle.load(f)
-#    yield_model, yield_encoder, yield_scaler = (
-#        model["model"],
-#        model["one_hot_encoder"],
-#        model["scaler"],
-#    )
+with open(yield_model_path, "rb") as f:
+    model = pickle.load(f)
+    yield_model, yield_encoder, yield_scaler = (
+        model["model"],
+        model["one_hot_encoder"],
+        model["scaler"],
+    )
 
 
 with open(fertilizer_model_path, "rb") as f:
@@ -118,22 +118,29 @@ def yield_prediction():
     if request.method == "POST":
         try:
             data = request.get_json()
-            N = int(data["nitrogen"])
-            P = int(data["phosphorous"])
-            K = int(data["pottasium"])
-            ph = float(data["ph"])
-            rainfall = float(data["rainfall"])
-            area = float(data["area"])
-            season = data.get("season")
+
+            N = int(data.get("nitrogen", 0))
+            P = int(data.get("phosphorous", 0))
+            K = int(data.get("pottasium", 0))
+            ph = float(data.get("ph", 7.0))
+            rainfall = float(data.get("rainfall", 0.0))
+            area = float(data.get("area", 1.0))
             state = data.get("state")
-            temperature = data.get("temperature")
+            temperature = float(data.get("temperature", 25.0))
+            crop = data.get("crop")
+            crop_type = data.get("crop_type")
 
-            input_data = np.array(
-                [state, season, crop, N, P, K, ph, rainfall, temperature, area]
-            )
+            if not crop_type or not state or not crop:
+                return jsonify({"error": "Missing required fields (crop_type, state, or crop)"}), 400
 
-            X_input = yield_preprocess(yield_model, yield_encoder, yield_scaler)
+            input_data = [
+                state, crop_type, crop, N, P, K, ph, rainfall, temperature, area
+            ]
 
+            # Preprocess the input data
+            X_input = yield_preprocess(input_data, yield_encoder, yield_scaler)
+
+            # Make prediction
             prediction = yield_model.predict(X_input)
 
             return jsonify({"prediction": prediction[0]})
