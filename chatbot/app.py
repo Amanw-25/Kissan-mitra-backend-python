@@ -1,6 +1,7 @@
 import os
 
 import streamlit as st
+import streamlit.components.v1 as components
 from audio_recorder_streamlit import audio_recorder
 from streamlit_float import *
 
@@ -79,13 +80,37 @@ if st.session_state.messages[-1]["role"] != "assistant":
         st.session_state.messages.append({"role": "assistant", "content": response})
 
         if st.session_state.tts_enabled:
-            with st.spinner("Generating audio response..."):
-                audio_file = text_to_speech(response, code)
-                autoplay_audio(audio_file)
-            os.remove(audio_file)
+            js_code = f"""
+                <script>
+                    console.log("Attempting TTS");
+                    var msg = new SpeechSynthesisUtterance();
+                    msg.text = "{response}";
+                    msg.lang = "{code}";
 
-st.session_state.stop_respond = False
+                    msg.onstart = function(event) {{
+                        console.log("SpeechSynthesis started");
+                    }};
+
+                    msg.onend = function(event) {{
+                        console.log("SpeechSynthesis ended");
+                    }};
+
+                    msg.onerror = function(event) {{
+                        console.error("SpeechSynthesis error", event);
+                    }};
+
+                    window.speechSynthesis.speak(msg);
+                </script>
+            """
+            components.html(js_code)
+
+
+#            with st.spinner("Generating audio response..."):
+#                audio_file = text_to_speech(response, code)
+#                autoplay_audio(audio_file)
+#            os.remove(audio_file)
+
 
 footer_container.float("bottom: 0rem; background: #0E1117;")
-col2.float("bottom: 0rem;")
-col3.float("bottom: 0rem;")
+# col2.float("bottom: 0rem;")
+# col3.float("bottom: 0rem;")

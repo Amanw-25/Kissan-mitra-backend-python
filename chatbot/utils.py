@@ -2,14 +2,12 @@ import base64
 import json
 import os
 
+import env
 import google.generativeai as genai
 import streamlit as st
-from dotenv import load_dotenv
 from gtts import gTTS
 
-load_dotenv()
-
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+genai.configure(api_key=env.GEMINI_API_KEY)
 generation_config = {
     "temperature": 1,
     "top_p": 0.95,
